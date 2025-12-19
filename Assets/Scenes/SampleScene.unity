@@ -919,7 +919,7 @@ MonoBehaviour:
   moveSpeed: 40
   accel: 5
   deccel: 15
-  airControl: 100
+  airControl: 1
   jumpForce: 6
   maxJumps: 20
   coyoteTime: 0.15
