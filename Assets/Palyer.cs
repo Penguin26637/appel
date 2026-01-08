@@ -23,6 +23,8 @@ public class Player : MonoBehaviour
     public float wallJumpDuration = 0.15f;
 
     [Header("Checks")]
+    public Transform rightgroundCheck;
+    public Transform leftgroundCheck;
     public Transform groundCheck;
     public Transform wallCheckRight;
     public Transform wallCheckLeft;
@@ -54,11 +56,20 @@ public class Player : MonoBehaviour
         // if (hit != null) {
         //     print("Hitting: " + hit.name);
         // }
+    
 
         moveInput = Input.GetAxisRaw("Horizontal");
 
         // Ground Check
-        isGrounded = Physics2D.OverlapCircle(groundCheck.position, checkRadius, groundLayer);
+        bool centerHit = Physics2D.OverlapCircle(groundCheck.position, checkRadius, groundLayer);
+        bool leftHit = Physics2D.OverlapCircle(leftgroundCheck.position, checkRadius, groundLayer);
+        bool rightHit = Physics2D.OverlapCircle(rightgroundCheck.position, checkRadius, groundLayer);
+
+// The player is grounded if ANY of the sensors are touching the ground.
+// They will only "fall" if ALL sensors return false.
+        isGrounded = centerHit || leftHit || rightHit;
+        // print("Is Grounded: " + isGrounded);
+        // print("Center: " + centerHit + " Left: " + leftHit + " Right: " + rightHit);
 
         // Wall Check using OverlapCircle on both specific transforms
         bool wallRight = Physics2D.OverlapCircle(wallCheckRight.position, wallCheckRadius, groundLayer);
@@ -210,10 +221,13 @@ void HandleMovement() {
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(groundCheck.position, checkRadius);
+        Gizmos.DrawWireSphere(rightgroundCheck.position, checkRadius);
+        Gizmos.DrawWireSphere(leftgroundCheck.position, checkRadius);
         Gizmos.color = Color.blue;
         if (wallCheckRight != null)
             Gizmos.DrawWireSphere(wallCheckRight.position, wallCheckRadius);
         if (wallCheckLeft != null)
             Gizmos.DrawWireSphere(wallCheckLeft.position, wallCheckRadius);
+        
     }
 }

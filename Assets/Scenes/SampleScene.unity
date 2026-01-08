@@ -594,17 +594,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d69303b22ae904f4aa0cbb14597083a7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moveSpeed: 7
-  accel: 15
+  moveSpeed: 40
+  accel: 5
   deccel: 15
   airControl: 0.5
-  jumpForce: 12
+  jumpForce: 6
   maxJumps: 2
   coyoteTime: 0.15
   jumpBufferTime: 0.15
-  wallSlideSpeed: 2
-  wallJumpForce: 16
-  wallJumpAngle: {x: 1, y: 2}
+  wallSlideSpeed: 0.5
+  wallJumpForce: 6
+  wallJumpAngle: {x: 0, y: 0}
   wallJumpDuration: 0.15
   groundCheck: {fileID: 94206392}
   wallCheckRight: {fileID: 772903640}
