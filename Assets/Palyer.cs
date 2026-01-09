@@ -12,7 +12,7 @@ public class Palyer : MonoBehaviour
 
     [Header("Jump Settings")]
     public float jumpForce = 14f;
-    public int maxJumps = 2; // double jump
+    public int maxJumps = 2;
     public float coyoteTime = 0.15f;
     public float jumpBufferTime = 0.15f;
 
@@ -24,7 +24,8 @@ public class Palyer : MonoBehaviour
 
     [Header("Checks")]
     public Transform groundCheck;
-    public Transform wallCheck;
+    public Transform leftWallCheck;
+    public Transform rightWallCheck;
     public float checkRadius = 0.1f;
     public LayerMask groundLayer;
 
@@ -32,10 +33,15 @@ public class Palyer : MonoBehaviour
     private int jumpsLeft;
     private float lastGroundedTime;
     private float lastJumpPressedTime;
+
     private bool isGrounded;
-    private bool isTouchingWall;
+    private bool wasGrounded;
+
+    private bool touchingLeftWall;
+    private bool touchingRightWall;
     private bool isWallSliding;
     private bool wallJumping;
+
     private float moveInput;
 
     void Start()
@@ -49,25 +55,28 @@ public class Palyer : MonoBehaviour
     {
         moveInput = Input.GetAxisRaw("Horizontal");
 
-        // Check ground & wall
+        // Ground check
         isGrounded = Physics2D.OverlapCircle(groundCheck.position, checkRadius, groundLayer);
-        isTouchingWall = Physics2D.Raycast(wallCheck.position, Vector2.right * transform.localScale.x, 0.1f, groundLayer);
-
-        if (isGrounded)
+        if (isGrounded && !wasGrounded)
         {
             lastGroundedTime = Time.time;
             jumpsLeft = maxJumps;
+            transform.rotation = Quaternion.identity;
         }
+        wasGrounded = isGrounded;
 
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
+        // Wall checks
+        touchingLeftWall = Physics2D.OverlapCircle(leftWallCheck.position, checkRadius, groundLayer);
+        touchingRightWall = Physics2D.OverlapCircle(rightWallCheck.position, checkRadius, groundLayer);
+
+        // Jump input (Space + Controller A)
+        bool jumpPressed = Input.GetKeyDown(KeyCode.Space) || Input.GetButtonDown("Jump");
+        if (jumpPressed)
             lastJumpPressedTime = Time.time;
-        }
 
         HandleJump();
-
         HandleWallSlide();
-
+        HandleWallRotation();
         FlipSprite();
     }
 
@@ -83,48 +92,45 @@ public class Palyer : MonoBehaviour
         float targetSpeed = moveInput * moveSpeed;
         float speedDiff = targetSpeed - rb.velocity.x;
 
-        float accelRate;
+        float accelRate = isGrounded
+            ? (Mathf.Abs(targetSpeed) > 0.01f ? accel : deccel)
+            : (Mathf.Abs(targetSpeed) > 0.01f ? accel * airControl : deccel * airControl);
 
-        if (isGrounded)
-            accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? accel : deccel;
-        else
-            accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? accel * airControl : deccel * airControl;
-
-        float movement = speedDiff * accelRate * Time.fixedDeltaTime;
-
-        rb.AddForce(movement * Vector2.right, ForceMode2D.Force);
+        rb.AddForce(speedDiff * accelRate * Time.fixedDeltaTime * Vector2.right);
     }
 
     void HandleJump()
     {
-        // Coyote + Jump Buffer
-        bool canJump = (Time.time - lastGroundedTime <= coyoteTime) || jumpsLeft > 0;
         bool buffered = Time.time - lastJumpPressedTime <= jumpBufferTime;
+        bool canJump = (Time.time - lastGroundedTime <= coyoteTime) || jumpsLeft > 0;
 
-        if (buffered && canJump)
-        {
-            Jump();
-        }
+        if (!buffered || !canJump) return;
+
+        Jump();
+        lastJumpPressedTime = -999f; // consume buffer
     }
 
     void Jump()
     {
-        // wall jump
         if (isWallSliding)
         {
             wallJumping = true;
-            rb.velocity = new Vector2(wallJumpAngle.x * -transform.localScale.x * wallJumpForce,
-                                      wallJumpAngle.y * wallJumpForce);
+            int wallDir = touchingLeftWall ? 1 : -1;
 
+            rb.velocity = new Vector2(
+                wallJumpAngle.x * wallDir * wallJumpForce,
+                wallJumpAngle.y * wallJumpForce
+            );
+
+            jumpsLeft--;
             Invoke(nameof(StopWallJump), wallJumpDuration);
-        }
-        else
-        {
-            rb.velocity = new Vector2(rb.velocity.x, jumpForce);
+            return;
         }
 
-        jumpsLeft--;
-        lastJumpPressedTime = -999f;
+        rb.velocity = new Vector2(rb.velocity.x, jumpForce);
+
+        if (!isGrounded)
+            jumpsLeft--;
     }
 
     void StopWallJump()
@@ -136,11 +142,21 @@ public class Palyer : MonoBehaviour
     {
         isWallSliding = false;
 
-        if (!isGrounded && isTouchingWall && moveInput != 0)
+        if (!isGrounded && rb.velocity.y < 0 && (touchingLeftWall || touchingRightWall))
         {
             isWallSliding = true;
-            rb.velocity = new Vector2(rb.velocity.x, Mathf.Clamp(rb.velocity.y, -wallSlideSpeed, float.MaxValue));
+            rb.velocity = new Vector2(rb.velocity.x, -wallSlideSpeed);
         }
+    }
+
+    void HandleWallRotation()
+    {
+        if (!isWallSliding) return;
+
+        if (touchingLeftWall)
+            transform.rotation = Quaternion.Euler(0, 0, 90);
+        else if (touchingRightWall)
+            transform.rotation = Quaternion.Euler(0, 0, -90);
     }
 
     void FlipSprite()
@@ -151,12 +167,15 @@ public class Palyer : MonoBehaviour
             transform.localScale = new Vector3(-1, 1, 1);
     }
 
-    private void OnDrawGizmosSelected()
+    void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(groundCheck.position, checkRadius);
 
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(leftWallCheck.position, checkRadius);
+
         Gizmos.color = Color.blue;
-        Gizmos.DrawLine(wallCheck.position, wallCheck.position + Vector3.right * transform.localScale.x * 0.1f);
+        Gizmos.DrawWireSphere(rightWallCheck.position, checkRadius);
     }
 }
