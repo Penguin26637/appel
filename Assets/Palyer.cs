@@ -33,7 +33,7 @@ public class Player : MonoBehaviour
     public LayerMask groundLayer;
 
     [Header("Visuals")]
-    public float wallTiltAngle = 15f;
+    public float wallTiltAngle = 90f;
 
     private Rigidbody2D rb;
     private int jumpsLeft;
@@ -46,6 +46,8 @@ public class Player : MonoBehaviour
     private float moveInput;
     private int wallSide; 
     private bool centerHit;
+
+    public float rotationSpeed = 20f;
 
     void Start()
     {
@@ -71,7 +73,9 @@ public class Player : MonoBehaviour
 
         // Wall Checks
         bool wallRight = Physics2D.OverlapCircle(wallCheckRight.position, wallCheckRadius, groundLayer);
+        //print("wallRight" + wallRight);
         bool wallLeft = Physics2D.OverlapCircle(wallCheckLeft.position, wallCheckRadius, groundLayer);
+        //print("wallLeft" + wallLeft);
         isTouchingWall = wallRight || wallLeft;
 
         if (wallRight) wallSide = 1;
@@ -157,12 +161,14 @@ public class Player : MonoBehaviour
 
     void HandleWallSlide()
     {
-        isWallSliding = false;
-        if (!isGrounded && isTouchingWall && rb.velocity.y < 0)
+        
+        //if (!isGrounded && isTouchingWall && rb.velocity.y < 0)
+        if (!isGrounded && isTouchingWall)
         {
             isWallSliding = true;
             rb.velocity = new Vector2(rb.velocity.x, Mathf.Clamp(rb.velocity.y, -wallSlideSpeed, float.MaxValue));
         }
+        else { isWallSliding = false; }
     }
 
     void FlipSprite()
@@ -170,20 +176,26 @@ public class Player : MonoBehaviour
         // 1. Horizontal Flip
         if (!wallJumping)
         {
-            if (moveInput > 0) transform.localScale = new Vector3(1, 1, 1);
-            else if (moveInput < 0) transform.localScale = new Vector3(-1, 1, 1);
+            if (moveInput > 0) GetComponent<SpriteRenderer>().flipX = false;
+            else if (moveInput < 0) GetComponent<SpriteRenderer>().flipX = true;
         }
-
+        
         // 2. Z-Axis Rotation (Wall Tilt)
         if (isWallSliding)
         {
             float targetZ = wallSide * wallTiltAngle;
-            transform.localEulerAngles = new Vector3(0, 0, targetZ);
+            float newRotation = rb.rotation + rotationSpeed * Time.fixedDeltaTime;
+            //// Apply the new rotation
+            //rb.MoveRotation(newRotation*wallSide);
+            float currentZ = rb.rotation;
+            float newZ = Mathf.MoveTowardsAngle(currentZ, wallTiltAngle, rotationSpeed*Time.deltaTime);
+            rb.rotation = (newZ);
+            print("Roation");
         }
-        else
-        {
-            transform.localEulerAngles = Vector3.zero;
-        }
+        //else
+        //{
+        //    //rb.MoveRotation = (0);
+        //}
     }
 
     private void OnDrawGizmosSelected()
