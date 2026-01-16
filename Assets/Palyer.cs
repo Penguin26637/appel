@@ -23,8 +23,8 @@ public class Player : MonoBehaviour
     public float wallJumpDuration = 0.15f;
 
     [Header("Checks")]
-    public Transform rightgroundCheck;
-    public Transform leftgroundCheck;
+    //public Transform rightgroundCheck;
+    //public Transform leftgroundCheck;
     public Transform groundCheck; // Center ground check
     public Transform wallCheckRight;
     public Transform wallCheckLeft;
@@ -47,7 +47,9 @@ public class Player : MonoBehaviour
     private int wallSide; 
     private bool centerHit;
 
-    public float rotationSpeed = 20f;
+    public bool isroating = false;
+
+    public float rotationSpeed = 50f;
 
     void Start()
     {
@@ -64,12 +66,13 @@ public class Player : MonoBehaviour
         moveInput = Input.GetAxisRaw("Horizontal");
 
         // Ground Checks
-        bool leftHit = Physics2D.OverlapCircle(leftgroundCheck.position, checkRadius, groundLayer);
-        bool rightHit = Physics2D.OverlapCircle(rightgroundCheck.position, checkRadius, groundLayer);
+        //bool leftHit = Physics2D.OverlapCircle(leftgroundCheck.position, checkRadius, groundLayer);
+        //bool rightHit = Physics2D.OverlapCircle(rightgroundCheck.position, checkRadius, groundLayer);
         centerHit = Physics2D.OverlapCircle(groundCheck.position, checkRadius, groundLayer);
 
         // General grounded logic for jumping
-        isGrounded = centerHit || leftHit || rightHit;
+        isGrounded = centerHit;
+            // || leftHit || rightHit;
 
         // Wall Checks
         bool wallRight = Physics2D.OverlapCircle(wallCheckRight.position, wallCheckRadius, groundLayer);
@@ -78,8 +81,8 @@ public class Player : MonoBehaviour
         //print("wallLeft" + wallLeft);
         isTouchingWall = wallRight || wallLeft;
 
-        if (wallRight) wallSide = 1;
-        else if (wallLeft) wallSide = -1;
+        if (wallRight) wallSide = -1;
+        else if (wallLeft) wallSide = 1;
 
         if (isGrounded)
         {
@@ -181,29 +184,34 @@ public class Player : MonoBehaviour
         }
         
         // 2. Z-Axis Rotation (Wall Tilt)
-        if (isWallSliding)
+        if (isWallSliding || isroating)
         {
             float targetZ = wallSide * wallTiltAngle;
             float newRotation = rb.rotation + rotationSpeed * Time.fixedDeltaTime;
             //// Apply the new rotation
-            //rb.MoveRotation(newRotation*wallSide);
+            rb.MoveRotation(newRotation*wallSide);
             float currentZ = rb.rotation;
-            float newZ = Mathf.MoveTowardsAngle(currentZ, wallTiltAngle, rotationSpeed*Time.deltaTime);
+            float newZ = Mathf.MoveTowardsAngle(currentZ, targetZ, rotationSpeed*Time.deltaTime);
             rb.rotation = (newZ);
             print("Roation");
+            isroating = true;
         }
-        //else
-        //{
-        //    //rb.MoveRotation = (0);
-        //}
+        else
+        {
+            rb.MoveRotation(0);
+        }
+        if (rb.rotation == 90 || rb.rotation == -90)
+        {
+            isroating = false;
+        }
     }
 
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(groundCheck.position, checkRadius);
-        Gizmos.DrawWireSphere(rightgroundCheck.position, checkRadius);
-        Gizmos.DrawWireSphere(leftgroundCheck.position, checkRadius);
+        //Gizmos.DrawWireSphere(rightgroundCheck.position, checkRadius);
+        //Gizmos.DrawWireSphere(leftgroundCheck.position, checkRadius);
         Gizmos.color = Color.blue;
         if (wallCheckRight != null) Gizmos.DrawWireSphere(wallCheckRight.position, wallCheckRadius);
         if (wallCheckLeft != null) Gizmos.DrawWireSphere(wallCheckLeft.position, wallCheckRadius);
