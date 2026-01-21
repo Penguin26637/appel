@@ -1,0 +1,4 @@
+May have broken everything
+
+also for ground detection check if ground is off the wall or if left/right is touching something while rotated
+also add a check for top and if colliding stick 
