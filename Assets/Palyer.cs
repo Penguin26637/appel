@@ -24,8 +24,6 @@ public class Player : MonoBehaviour
     public float wallJumpDuration = 0.15f;
 
     [Header("Checks")]
-    //public Transform rightgroundCheck;
-    //public Transform leftgroundCheck;
     public Transform groundCheck; // Center ground check
     public Transform wallCheckRight;
     public Transform wallCheckLeft;
@@ -37,6 +35,7 @@ public class Player : MonoBehaviour
     public float wallTiltAngle = 90f;
 
     private Rigidbody2D rb;
+    private Animator animator;
     private int jumpsLeft;
     private float lastGroundedTime;
     private float lastJumpPressedTime;
@@ -48,13 +47,10 @@ public class Player : MonoBehaviour
     private int wallSide;
     private bool centerHit;
 
-    public bool rotatating = false;
-
-    public float rotationSpeed = 20f;
-
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
+        animator = GetComponent<Animator>();
         jumpsLeft = maxJumps;
         wallJumpAngle.Normalize();
 
@@ -66,19 +62,18 @@ public class Player : MonoBehaviour
     {
         moveInput = Input.GetAxisRaw("Horizontal");
 
-        //// Ground Checks
-        //bool leftHit = Physics2D.OverlapCircle(leftgroundCheck.position, checkRadius, groundLayer);
-        //bool rightHit = Physics2D.OverlapCircle(rightgroundCheck.position, checkRadius, groundLayer);
+        // Ground Check
         centerHit = Physics2D.OverlapCircle(groundCheck.position, checkRadius, groundLayer);
+        isGrounded = centerHit;
 
-        // General grounded logic for jumping
-        isGrounded = centerHit; //|| leftHit || rightHit;
+        // Wall Checks - Use horizontal raycasts instead of overlap circles
+        RaycastHit2D wallRightHit = Physics2D.Raycast(wallCheckRight.position, Vector2.right, wallCheckRadius, groundLayer);
+        RaycastHit2D wallLeftHit = Physics2D.Raycast(wallCheckLeft.position, Vector2.left, wallCheckRadius, groundLayer);
 
-        // Wall Checks
-        bool wallRight = Physics2D.OverlapCircle(wallCheckRight.position, wallCheckRadius, groundLayer);
-        //print("wallRight" + wallRight);
-        bool wallLeft = Physics2D.OverlapCircle(wallCheckLeft.position, wallCheckRadius, groundLayer);
-        //print("wallLeft" + wallLeft);
+
+        bool wallRight = wallRightHit.collider != null && !isGrounded;
+        bool wallLeft = wallLeftHit.collider != null && !isGrounded;
+
         isTouchingWall = wallRight || wallLeft;
 
         if (wallRight) wallSide = -1;
@@ -95,6 +90,7 @@ public class Player : MonoBehaviour
         HandleJump();
         HandleWallSlide();
         FlipSprite();
+        HandleWallRotationAnimation();
     }
 
     void FixedUpdate()
@@ -124,10 +120,10 @@ public class Player : MonoBehaviour
 
         // EDGE SLIDING PREVENTION:
         // If center is grounded but sides are not, and there is no input, kill horizontal velocity
-        if (centerHit && Mathf.Abs(moveInput) < 0.01f)
-        {
-            rb.velocity = new Vector2(0, rb.velocity.y);
-        }
+        //if (centerHit && Mathf.Abs(moveInput) < 0.01f)
+        //{
+        //    rb.velocity = new Vector2(0, rb.velocity.y);
+        //}
     }
 
     void HandleJump()
@@ -148,9 +144,10 @@ public class Player : MonoBehaviour
         {
             rb.velocity = new Vector2(rb.velocity.x, 0);
             wallJumping = true;
-            rb.velocity = new Vector2(wallJumpAngle.x * -wallSide * wallJumpForce, wallJumpAngle.y * wallJumpForce);
+            rb.velocity = new Vector2(wallJumpAngle.x * wallJumpForce, wallJumpAngle.y * wallJumpForce);
             Invoke(nameof(StopWallJump), wallJumpDuration);
             jumpsLeft--;
+
         }
         else
         {
@@ -164,94 +161,66 @@ public class Player : MonoBehaviour
 
     void HandleWallSlide()
     {
-
-        //if (!isGrounded && isTouchingWall && rb.velocity.y < 0)
-        if (!isGrounded && isTouchingWall)
+        if (!isGrounded && isTouchingWall && rb.velocity.y < 0)
         {
             isWallSliding = true;
             rb.velocity = new Vector2(rb.velocity.x, Mathf.Clamp(rb.velocity.y, -wallSlideSpeed, float.MaxValue));
         }
-        else { isWallSliding = false; }
+        else
+        {
+            isWallSliding = false;
+        }
     }
-
 
     void FlipSprite()
     {
-        // 1. Horizontal Flip
+        // Horizontal Flip
         if (!wallJumping)
         {
             if (moveInput > 0) GetComponent<SpriteRenderer>().flipX = false;
             else if (moveInput < 0) GetComponent<SpriteRenderer>().flipX = true;
         }
-
-        // 2. Z-Axis Rotation (Wall Tilt) - Only when touching wall AND not grounded
-        if (isTouchingWall && !isGrounded && rb.velocity.y < 0)
-        {
-            float targetZ = wallSide * wallTiltAngle;
-            float currentZ = transform.eulerAngles.z;
-
-            // Normalize angle to -180 to 180 range
-            if (currentZ > 180) currentZ -= 360;
-
-            float newZ = Mathf.MoveTowardsAngle(currentZ, targetZ, rotationSpeed * Time.deltaTime);
-            transform.rotation = Quaternion.Euler(0, 0, newZ);
-        }
-        else
-        {
-            // Return to upright position
-            float currentZ = transform.eulerAngles.z;
-            if (currentZ > 180) currentZ -= 360;
-
-            float newZ = Mathf.MoveTowardsAngle(currentZ, 0, rotationSpeed * Time.deltaTime);
-            transform.rotation = Quaternion.Euler(0, 0, newZ);
-        }
     }
 
-    //void FlipSprite()
-    //{
-    //    // 1. Horizontal Flip
-    //    if (!wallJumping)
-    //    {
-    //        if (moveInput > 0) GetComponent<SpriteRenderer>().flipX = false;
-    //        else if (moveInput < 0) GetComponent<SpriteRenderer>().flipX = true;
-    //    }
+    void HandleWallRotationAnimation()
+    {
+        if (animator == null) return;
 
-
-
-
-    //    // 2. Z-Axis Rotation (Wall Tilt)
-    //    //if (isWallSliding || rotatating)
-    //    //{
-    //    //    float targetZ = wallSide * wallTiltAngle;
-    //    //    float newRotation = rb.rotation + rotationSpeed * Time.fixedDeltaTime;
-    //    //    //// Apply the new rotation
-    //    //    rb.MoveRotation(newRotation*wallSide);
-    //    //    float currentZ = rb.rotation;
-    //    //    float newZ = Mathf.MoveTowardsAngle(currentZ, targetZ, rotationSpeed * Time.deltaTime);
-    //    //    rb.rotation = (newZ);
-    //    //    rotatating = true; 
-    //    //    print("Roation");
-    //    //}
-
-    //    //if (rb.rotation == 90 || rb.rotation == -90)
-    //    //{
-    //    //    rotatating = false;
-    //    //}
-
-    //    //else
-    //    //{
-    //    //    //rb.MoveRotation = (0);
-    //    //}
-    //}
+        // Trigger wall rotation animations
+        if (isTouchingWall && !isGrounded)
+        {
+            if (wallSide == -1) // Right wall (rotate left)
+            {
+                animator.Play("playerrotatelef");
+            }
+            else if (wallSide == 1) // Left wall (rotate right)
+            {
+                animator.Play("playerrotateright");
+            }
+        }
+        //else
+        //{
+        //    // Return to idle/normal state - reset rotation
+        //    // You can create a "playerrotatenormal" animation or just reset transform
+        //    transform.rotation = Quaternion.Euler(0, 0, 0);
+        //}
+    }
 
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(groundCheck.position, checkRadius);
-        //Gizmos.DrawWireSphere(rightgroundCheck.position, checkRadius);
-        //Gizmos.DrawWireSphere(leftgroundCheck.position, checkRadius);
+
         Gizmos.color = Color.blue;
-        if (wallCheckRight != null) Gizmos.DrawWireSphere(wallCheckRight.position, wallCheckRadius);
-        if (wallCheckLeft != null) Gizmos.DrawWireSphere(wallCheckLeft.position, wallCheckRadius);
+        if (wallCheckRight != null)
+        {
+            Gizmos.DrawWireSphere(wallCheckRight.position, wallCheckRadius);
+            Gizmos.DrawRay(wallCheckRight.position, Vector2.right * wallCheckRadius);
+        }
+        if (wallCheckLeft != null)
+        {
+            Gizmos.DrawWireSphere(wallCheckLeft.position, wallCheckRadius);
+            Gizmos.DrawRay(wallCheckLeft.position, Vector2.left * wallCheckRadius);
+        }
     }
 }
