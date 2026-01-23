@@ -495,6 +495,7 @@ GameObject:
   - component: {fileID: 580365914}
   - component: {fileID: 580365913}
   - component: {fileID: 580365915}
+  - component: {fileID: 580365916}
   m_Layer: 0
   m_Name: LemonGuy
   m_TagString: Untagged
@@ -670,8 +671,6 @@ MonoBehaviour:
   wallJumpForce: 6
   wallJumpAngle: {x: 0, y: 0}
   wallJumpDuration: 0.15
-  rightgroundCheck: {fileID: 79688652}
-  leftgroundCheck: {fileID: 290476056}
   groundCheck: {fileID: 94206392}
   wallCheckRight: {fileID: 772903640}
   wallCheckLeft: {fileID: 2042199278}
@@ -681,6 +680,27 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 8
   wallTiltAngle: 15
+--- !u!95 &580365916
+Animator:
+  serializedVersion: 5
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 580365910}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 817bc1d1fdf8f1b40924628e7d00dd05, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &619394800
 GameObject:
   m_ObjectHideFlags: 0
