@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -23,12 +24,17 @@ public class Player : MonoBehaviour
     public float wallJumpDuration = 0.15f;
 
     [Header("Checks")]
-    public Transform groundCheck;
+    //public Transform rightgroundCheck;
+    //public Transform leftgroundCheck;
+    public Transform groundCheck; // Center ground check
     public Transform wallCheckRight;
     public Transform wallCheckLeft;
     public float checkRadius = 0.1f;
     public float wallCheckRadius = 0.1f;
     public LayerMask groundLayer;
+
+    [Header("Visuals")]
+    public float wallTiltAngle = 90f;
 
     private Rigidbody2D rb;
     private int jumpsLeft;
@@ -39,97 +45,90 @@ public class Player : MonoBehaviour
     private bool isWallSliding;
     private bool wallJumping;
     private float moveInput;
-    private int wallSide; // 1 for right, -1 for left
+    private int wallSide;
+    private bool centerHit;
+
+    public bool rotatating = false;
+
+    public float rotationSpeed = 20f;
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         jumpsLeft = maxJumps;
         wallJumpAngle.Normalize();
+
+        // Ensure rotation is frozen on Z-axis to prevent physical tipping
+        rb.constraints = RigidbodyConstraints2D.FreezeRotation;
     }
 
     void Update()
     {
-        // Collider2D hit = Physics2D.OverlapCircle(groundCheck.position, checkRadius, groundLayer);
-        // if (hit != null) {
-        //     print("Hitting: " + hit.name);
-        // }
-
         moveInput = Input.GetAxisRaw("Horizontal");
 
-        // Ground Check
-        isGrounded = Physics2D.OverlapCircle(groundCheck.position, checkRadius, groundLayer);
+        //// Ground Checks
+        //bool leftHit = Physics2D.OverlapCircle(leftgroundCheck.position, checkRadius, groundLayer);
+        //bool rightHit = Physics2D.OverlapCircle(rightgroundCheck.position, checkRadius, groundLayer);
+        centerHit = Physics2D.OverlapCircle(groundCheck.position, checkRadius, groundLayer);
 
-        // Wall Check using OverlapCircle on both specific transforms
+        // General grounded logic for jumping
+        isGrounded = centerHit; //|| leftHit || rightHit;
+
+        // Wall Checks
         bool wallRight = Physics2D.OverlapCircle(wallCheckRight.position, wallCheckRadius, groundLayer);
+        //print("wallRight" + wallRight);
         bool wallLeft = Physics2D.OverlapCircle(wallCheckLeft.position, wallCheckRadius, groundLayer);
+        //print("wallLeft" + wallLeft);
         isTouchingWall = wallRight || wallLeft;
 
-        // Determine which side the wall is on for jumping mechanics
-        if (wallRight) wallSide = 1;
-        else if (wallLeft) wallSide = -1;
+        if (wallRight) wallSide = -1;
+        else if (wallLeft) wallSide = 1;
 
         if (isGrounded)
         {
             lastGroundedTime = Time.time;
-            // Reset jumps only if we aren't currently wall jumping (prevents instant double jump after wall jump)
-            if (!wallJumping)
-            {
-                jumpsLeft = maxJumps;
-            }
+            if (!wallJumping) jumpsLeft = maxJumps;
         }
 
-        if (Input.GetButtonDown("Jump"))
-        {
-            lastJumpPressedTime = Time.time;
-        }
+        if (Input.GetButtonDown("Jump")) lastJumpPressedTime = Time.time;
 
         HandleJump();
         HandleWallSlide();
         FlipSprite();
-        HandleWallRotation();
-        // Reset rotation if not touching wall and rotation is not 0
-        if (!isTouchingWall && transform.localEulerAngles.z != 0f)
-        {
-            transform.localEulerAngles = new Vector3(0, 0, 0);
-        }
     }
 
     void FixedUpdate()
     {
         HandleMovement();
     }
-void HandleWallRotation()
-{
-    if (isTouchingWall && !isGrounded)
+
+    void HandleMovement()
     {
-        // Rotate -90 degrees if touching right wall, 90 if touching left wall
-        float targetZ = (wallSide == 1) ? -90f : 90f;
-        transform.localEulerAngles = new Vector3(0, 0, targetZ);
-    }
-    else if (transform.localEulerAngles.z != 0f)
-    {
-        // Reset rotation when not on a wall
-        transform.localEulerAngles = Vector3.zero;
-    }
-}
-void HandleMovement() {
-    if (wallJumping) return;
+        if (wallJumping) return;
 
-    float targetSpeed = moveInput * moveSpeed;
-    float speedDiff = targetSpeed - rb.velocity.x;
-    float accelRate;
+        float targetSpeed = moveInput * moveSpeed;
+        float speedDiff = targetSpeed - rb.velocity.x;
+        float accelRate;
 
-    if (isGrounded) {
-        accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? accel : deccel;
-        // print("Grounded"); // Capital D and inside braces
-    } else {
-        accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? accel * airControl : deccel * airControl;
+        if (isGrounded)
+        {
+            accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? accel : deccel;
+        }
+        else
+        {
+            accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? accel * airControl : deccel * airControl;
+        }
+
+        float movement = speedDiff * accelRate * Time.fixedDeltaTime;
+        rb.AddForce(movement * Vector2.right, ForceMode2D.Force);
+
+        // EDGE SLIDING PREVENTION:
+        // If center is grounded but sides are not, and there is no input, kill horizontal velocity
+        if (centerHit && Mathf.Abs(moveInput) < 0.01f)
+        {
+            rb.velocity = new Vector2(0, rb.velocity.y);
+        }
     }
-
-    float movement = speedDiff * accelRate * Time.fixedDeltaTime;
-    rb.AddForce(movement * Vector2.right, ForceMode2D.Force);
-}
 
     void HandleJump()
     {
@@ -138,82 +137,121 @@ void HandleMovement() {
 
         if (buffered)
         {
-            // Ground/Coyote Jump
-            if (coyote || isWallSliding) // Allow wall jump via buffer
-            {
-                Jump();
-            }
-            // Air Jump
-            else if (!isGrounded && jumpsLeft > 0)
-            {
-                Jump();
-            }
+            if (coyote || isWallSliding) Jump();
+            else if (!isGrounded && jumpsLeft > 0) Jump();
         }
     }
 
     void Jump()
     {
-        // If wall sliding, perform a wall jump
         if (isWallSliding)
         {
-            // Reset vertical velocity for consistent jump feel
-            rb.velocity = new Vector2(rb.velocity.x, 0); 
+            rb.velocity = new Vector2(rb.velocity.x, 0);
             wallJumping = true;
-            // Jump away from the wall side detected
             rb.velocity = new Vector2(wallJumpAngle.x * -wallSide * wallJumpForce, wallJumpAngle.y * wallJumpForce);
             Invoke(nameof(StopWallJump), wallJumpDuration);
-            // After wall jump, count it as an air jump
-            jumpsLeft--; 
+            jumpsLeft--;
         }
         else
         {
-            // Regular ground or air jump logic
-            // Reset current vertical velocity to ensure consistent jump height
             rb.velocity = new Vector2(rb.velocity.x, jumpForce);
-            if (!isGrounded) // Only decrement for air jumps (ground jumps reset jumpsLeft in Update)
-            {
-                 jumpsLeft--;
-                //  print("Air jump performed");
-            }
+            if (!isGrounded) jumpsLeft--;
         }
-        
-        lastJumpPressedTime = -999f; // Reset buffer after successful jump
+        lastJumpPressedTime = -999f;
     }
 
     void StopWallJump() => wallJumping = false;
 
     void HandleWallSlide()
     {
-        isWallSliding = false;
-        // Slide if hitting a wall in mid-air (no need to check moveInput to simply *stick* to the wall)
+
+        //if (!isGrounded && isTouchingWall && rb.velocity.y < 0)
         if (!isGrounded && isTouchingWall)
         {
             isWallSliding = true;
-            // Clamping the downward speed
             rb.velocity = new Vector2(rb.velocity.x, Mathf.Clamp(rb.velocity.y, -wallSlideSpeed, float.MaxValue));
         }
+        else { isWallSliding = false; }
     }
+
 
     void FlipSprite()
     {
-        // Don't flip while wall jumping to prevent jitter
-        if (wallJumping) return;
+        // 1. Horizontal Flip
+        if (!wallJumping)
+        {
+            if (moveInput > 0) GetComponent<SpriteRenderer>().flipX = false;
+            else if (moveInput < 0) GetComponent<SpriteRenderer>().flipX = true;
+        }
 
-        if (moveInput > 0)
-            transform.localScale = new Vector3(1, 1, 1);
-        else if (moveInput < 0)
-            transform.localScale = new Vector3(-1, 1, 1);
+        // 2. Z-Axis Rotation (Wall Tilt) - Only when touching wall AND not grounded
+        if (isTouchingWall && !isGrounded && rb.velocity.y < 0)
+        {
+            float targetZ = wallSide * wallTiltAngle;
+            float currentZ = transform.eulerAngles.z;
+
+            // Normalize angle to -180 to 180 range
+            if (currentZ > 180) currentZ -= 360;
+
+            float newZ = Mathf.MoveTowardsAngle(currentZ, targetZ, rotationSpeed * Time.deltaTime);
+            transform.rotation = Quaternion.Euler(0, 0, newZ);
+        }
+        else
+        {
+            // Return to upright position
+            float currentZ = transform.eulerAngles.z;
+            if (currentZ > 180) currentZ -= 360;
+
+            float newZ = Mathf.MoveTowardsAngle(currentZ, 0, rotationSpeed * Time.deltaTime);
+            transform.rotation = Quaternion.Euler(0, 0, newZ);
+        }
     }
 
-    // Draw Gizmos for the new check points
+    //void FlipSprite()
+    //{
+    //    // 1. Horizontal Flip
+    //    if (!wallJumping)
+    //    {
+    //        if (moveInput > 0) GetComponent<SpriteRenderer>().flipX = false;
+    //        else if (moveInput < 0) GetComponent<SpriteRenderer>().flipX = true;
+    //    }
+
+
+
+
+    //    // 2. Z-Axis Rotation (Wall Tilt)
+    //    //if (isWallSliding || rotatating)
+    //    //{
+    //    //    float targetZ = wallSide * wallTiltAngle;
+    //    //    float newRotation = rb.rotation + rotationSpeed * Time.fixedDeltaTime;
+    //    //    //// Apply the new rotation
+    //    //    rb.MoveRotation(newRotation*wallSide);
+    //    //    float currentZ = rb.rotation;
+    //    //    float newZ = Mathf.MoveTowardsAngle(currentZ, targetZ, rotationSpeed * Time.deltaTime);
+    //    //    rb.rotation = (newZ);
+    //    //    rotatating = true; 
+    //    //    print("Roation");
+    //    //}
+
+    //    //if (rb.rotation == 90 || rb.rotation == -90)
+    //    //{
+    //    //    rotatating = false;
+    //    //}
+
+    //    //else
+    //    //{
+    //    //    //rb.MoveRotation = (0);
+    //    //}
+    //}
+
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(groundCheck.position, checkRadius);
+        //Gizmos.DrawWireSphere(rightgroundCheck.position, checkRadius);
+        //Gizmos.DrawWireSphere(leftgroundCheck.position, checkRadius);
         Gizmos.color = Color.blue;
-        if (wallCheckRight != null)
-            Gizmos.DrawWireSphere(wallCheckRight.position, wallCheckRadius);
-        if (wallCheckLeft != null)
-            Gizmos.DrawWireSphere(wallCheckLeft.position, wallCheckRadius);
+        if (wallCheckRight != null) Gizmos.DrawWireSphere(wallCheckRight.position, wallCheckRadius);
+        if (wallCheckLeft != null) Gizmos.DrawWireSphere(wallCheckLeft.position, wallCheckRadius);
     }
 }
