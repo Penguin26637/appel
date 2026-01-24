@@ -47,6 +47,9 @@ public class Player : MonoBehaviour
     private int wallSide;
     private bool centerHit;
 
+    public bool wallRight;
+    public bool wallLeft;
+
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -56,6 +59,8 @@ public class Player : MonoBehaviour
 
         // Ensure rotation is frozen on Z-axis to prevent physical tipping
         rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+        animator = GetComponent<Animator>();
+
     }
 
     void Update()
@@ -71,8 +76,9 @@ public class Player : MonoBehaviour
         RaycastHit2D wallLeftHit = Physics2D.Raycast(wallCheckLeft.position, Vector2.left, wallCheckRadius, groundLayer);
 
 
-        bool wallRight = wallRightHit.collider != null && !isGrounded;
-        bool wallLeft = wallLeftHit.collider != null && !isGrounded;
+        wallRight = wallRightHit.collider != null && !isGrounded;
+        wallLeft = wallLeftHit.collider != null && !isGrounded;
+
 
         isTouchingWall = wallRight || wallLeft;
 
@@ -186,18 +192,38 @@ public class Player : MonoBehaviour
     {
         if (animator == null) return;
 
+        
+
         // Trigger wall rotation animations
-        if (isTouchingWall && !isGrounded)
+        if (isTouchingWall && !isGrounded && !(rb.rotation > 0) || !(rb.rotation < 0))
         {
             if (wallSide == -1) // Right wall (rotate left)
             {
                 animator.Play("playerrotatelef");
+                wallRight = true;
             }
             else if (wallSide == 1) // Left wall (rotate right)
             {
                 animator.Play("playerrotateright");
+                wallLeft = true;
             }
+
+            if (rb.rotation == 90 || rb.rotation == -90 && wallCheckLeft || wallCheckRight)
+            {
+                animator.Play("Idle");
+            }
+                
+
+
+
+            //    if (rb.rotation == 90 || rb.rotation == -90)
+            //{
+            //    animator.SetBool("Left_Active", wallLeft);
+
+            //    animator.SetBool("Right_Active", wallRight);
+            //}
         }
+        
         //else
         //{
         //    // Return to idle/normal state - reset rotation
