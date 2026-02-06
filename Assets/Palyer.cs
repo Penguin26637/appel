@@ -27,6 +27,7 @@ public class Player : MonoBehaviour
     public Transform groundCheck; // Assign "Ground" from LemonGuy children
     public Transform wallCheckRight; // Assign "Right" or "RightGround" 
     public Transform wallCheckLeft; // Assign "Left" or "LeftGround"
+    public Transform Top;
     public float checkRadius = 0.1f;
     public float wallCheckRadius = 0.1f;
     public LayerMask groundLayer; // Set to the layer your platforms/walls use
@@ -41,6 +42,7 @@ public class Player : MonoBehaviour
     private float lastGroundedTime;
     private float lastJumpPressedTime;
     private bool isGrounded;
+    private bool isTop;
     private bool isTouchingWall;
     private bool isWallSliding;
     private bool wallJumping;
@@ -48,6 +50,7 @@ public class Player : MonoBehaviour
     private int wallSide;
     private bool wallRight;
     private bool wallLeft;
+    private bool movingup = false;
 
     void Start()
     {
@@ -104,6 +107,8 @@ public class Player : MonoBehaviour
             Debug.LogError("Right wall check not assigned!");
         if (wallCheckLeft == null)
             Debug.LogError("Left wall check not assigned!");
+        if (Top == null)
+            Debug.LogError("Top Wall Check not assigned!");
 
         jumpsLeft = maxJumps;
         wallJumpAngle.Normalize();
@@ -121,6 +126,8 @@ public class Player : MonoBehaviour
 
         // Ground Check using Ground child position from LemonGuy
         isGrounded = Physics2D.OverlapCircle(groundCheck.position, checkRadius, groundLayer);
+
+        isTop = Physics2D.OverlapCircle(Top.position, checkRadius, groundLayer);
 
         // Wall Checks using Left and Right child positions from LemonGuy
         RaycastHit2D wallRightHit = Physics2D.Raycast(wallCheckRight.position, Vector2.right, wallCheckRadius, groundLayer);
@@ -146,17 +153,34 @@ public class Player : MonoBehaviour
             }
         }
 
-        // Detect jump input
-        if (Input.GetButtonDown("Jump"))
-        {
-            lastJumpPressedTime = Time.time;
+
+
+        if (Input.GetAxisRaw("Vertical") >= 0.2) {
+            movingup = true;
+        } else {
+            movingup = false;
         }
 
-        HandleJump();
-        HandleWallSlide();
-        FlipSprite();
-        HandleWallRotationAnimation();
-    }
+        print("Moving up" + movingup);
+        print("Axis Raw" + Input.GetAxisRaw("Vertical"));
+                
+        if (isTop == true && movingup)
+        {
+            rb.velocity = new Vector2(rb.velocity.x, 0);
+            // keep player in place
+
+            // Detect jump input
+            if (Input.GetButtonDown("Jump"))
+            {
+                lastJumpPressedTime = Time.time;
+            }
+        }
+
+            HandleJump();
+                HandleWallSlide();
+                FlipSprite();
+                HandleWallRotationAnimation();
+            }
 
     void FixedUpdate()
     {
@@ -338,6 +362,11 @@ public class Player : MonoBehaviour
             animator.SetBool("Right_Active", false);
         }
 
+        if (animator.GetBool("Left_Active") || animator.GetBool("Right_Active"))
+        {
+            jumpsLeft = 2;
+        }
+
         // Debug: Show current parameter values
         bool leftActive = animator.GetBool("Left_Active");
         bool rightActive = animator.GetBool("Right_Active");
@@ -351,6 +380,7 @@ public class Player : MonoBehaviour
         {
             Gizmos.color = Color.yellow;
             Gizmos.DrawWireSphere(groundCheck.position, checkRadius);
+            Gizmos.DrawWireSphere(Top.position, checkRadius);
         }
 
         // Draw right wall check
@@ -359,7 +389,7 @@ public class Player : MonoBehaviour
             Gizmos.color = Color.blue;
             Gizmos.DrawWireSphere(wallCheckRight.position, wallCheckRadius);
             Gizmos.DrawRay(wallCheckRight.position, Vector2.right * wallCheckRadius);
-        }
+        }   
 
         // Draw left wall check
         if (wallCheckLeft != null)
