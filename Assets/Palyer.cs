@@ -155,32 +155,38 @@ public class Player : MonoBehaviour
 
 
 
-        if (Input.GetAxisRaw("Vertical") >= 0.2) {
+        // Detect jump input - THIS MUST BE OUTSIDE ANY CONDITIONAL BLOCKS
+        if (Input.GetButtonDown("Jump"))
+        {
+            lastJumpPressedTime = Time.time;
+        }
+
+        if (Input.GetAxisRaw("Vertical") >= 0.2)
+        {
             movingup = true;
-        } else {
+        }
+        else
+        {
             movingup = false;
         }
 
-        print("Moving up" + movingup);
-        print("Axis Raw" + Input.GetAxisRaw("Vertical"));
-                
         if (isTop == true && movingup)
         {
+            // Stick to roof by disabling gravity and zeroing velocity
+            rb.gravityScale = 0;
             rb.velocity = new Vector2(rb.velocity.x, 0);
-            // keep player in place
-
-            // Detect jump input
-            if (Input.GetButtonDown("Jump"))
-            {
-                lastJumpPressedTime = Time.time;
-            }
+        }
+        else
+        {
+            // Re-enable gravity when not sticking to roof
+            rb.gravityScale = 1;
         }
 
-            HandleJump();
-                HandleWallSlide();
-                FlipSprite();
-                HandleWallRotationAnimation();
-            }
+        HandleJump();
+        HandleWallSlide();
+        FlipSprite();
+        HandleWallRotationAnimation();
+    }
 
     void FixedUpdate()
     {
@@ -213,7 +219,7 @@ public class Player : MonoBehaviour
     {
         if (rb == null) return;
 
-        bool jumpPressed = Time.time - lastJumpPressedTime <= jumpBufferTime;
+        bool jumpPressed = Input.GetButtonDown("Jump");
         bool coyote = Time.time - lastGroundedTime <= coyoteTime;
 
         if (jumpPressed)
@@ -224,12 +230,9 @@ public class Player : MonoBehaviour
                 WallJump();
             }
             // Priority 2: Ground jump (including coyote time)
-            else if (isGrounded || coyote)
+            else if ((isGrounded || coyote) && jumpsLeft > 0)
             {
-                if (jumpsLeft == maxJumps) // Only jump if we haven't used jumps yet
-                {
-                    Jump();
-                }
+                Jump();
             }
             // Priority 3: Air jump (double jump, triple jump, etc.)
             else if (!isGrounded && jumpsLeft > 0)
@@ -244,13 +247,8 @@ public class Player : MonoBehaviour
         // Set Y velocity to jump force, keep X velocity
         rb.velocity = new Vector2(rb.velocity.x, jumpForce);
 
-        // Only decrease jumps if we're in the air
-        if (!isGrounded)
-        {
-            jumpsLeft--;
-        }
-
-        lastJumpPressedTime = -999f; // Reset jump buffer
+        // Decrease jumps
+        jumpsLeft--;
     }
 
     void WallJump()
@@ -269,8 +267,6 @@ public class Player : MonoBehaviour
 
         // Reset jumps after wall jump
         jumpsLeft = maxJumps - 1;
-
-        lastJumpPressedTime = -999f; // Reset jump buffer
 
         Invoke(nameof(StopWallJump), wallJumpDuration);
     }
@@ -333,24 +329,16 @@ public class Player : MonoBehaviour
             return;
         }
 
-        // Debug logging - check wall detection
-        if (isTouchingWall)
-        {
-            Debug.Log($"Wall detected! wallLeft: {wallLeft}, wallRight: {wallRight}, wallSide: {wallSide}, isGrounded: {isGrounded}");
-        }
-
         // Set animator parameters based on wall touching state
         if (isTouchingWall && !isGrounded)
         {
             if (wallSide == -1) // Wall on left
             {
-                Debug.Log("Setting Left_Active = true, Right_Active = false");
                 animator.SetBool("Left_Active", true);
                 animator.SetBool("Right_Active", false);
             }
             else if (wallSide == 1) // Wall on right
             {
-                Debug.Log("Setting Left_Active = false, Right_Active = true");
                 animator.SetBool("Left_Active", false);
                 animator.SetBool("Right_Active", true);
             }
@@ -361,16 +349,6 @@ public class Player : MonoBehaviour
             animator.SetBool("Left_Active", false);
             animator.SetBool("Right_Active", false);
         }
-
-        if (animator.GetBool("Left_Active") || animator.GetBool("Right_Active"))
-        {
-            jumpsLeft = 2;
-        }
-
-        // Debug: Show current parameter values
-        bool leftActive = animator.GetBool("Left_Active");
-        bool rightActive = animator.GetBool("Right_Active");
-        Debug.Log($"Current animator state: Left_Active = {leftActive}, Right_Active = {rightActive}");
     }
 
     private void OnDrawGizmosSelected()
@@ -389,7 +367,7 @@ public class Player : MonoBehaviour
             Gizmos.color = Color.blue;
             Gizmos.DrawWireSphere(wallCheckRight.position, wallCheckRadius);
             Gizmos.DrawRay(wallCheckRight.position, Vector2.right * wallCheckRadius);
-        }   
+        }
 
         // Draw left wall check
         if (wallCheckLeft != null)
