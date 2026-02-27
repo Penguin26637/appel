@@ -188,6 +188,7 @@ public class Player : MonoBehaviour
         HandleWallSlide();
         FlipSprite();
         HandleWallRotationAnimation();
+        //OnDrawGizmosSelected();
     }
 
     void FixedUpdate()
@@ -213,7 +214,8 @@ public class Player : MonoBehaviour
             accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? airaccel * airControl : airdeccel * airControl;
         }
 
-        float movement = speedDiff * accelRate * Time.fixedDeltaTime;
+        //float movement = speedDiff * accelRate * Time.fixedDeltaTime;
+        float movement = speedDiff * Time.fixedDeltaTime;
         rb.AddForce(movement * Vector2.right, ForceMode2D.Force);
     }
 
