@@ -8,7 +8,9 @@ public class Player : MonoBehaviour
     [Header("Movement")]
     public float moveSpeed = 40f;
     public float accel = 5f;
+    public float airaccel = 5f;
     public float deccel = 15f;
+    public float airdeccel = 15f;
     public float airControl = 0.5f;
 
     [Header("Jump Settings")]
@@ -208,7 +210,7 @@ public class Player : MonoBehaviour
         }
         else
         {
-            accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? accel * airControl : deccel * airControl;
+            accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? airaccel * airControl : airdeccel * airControl;
         }
 
         float movement = speedDiff * accelRate * Time.fixedDeltaTime;
@@ -336,11 +338,13 @@ public class Player : MonoBehaviour
             {
                 animator.SetBool("Left_Active", true);
                 animator.SetBool("Right_Active", false);
+                jumpsLeft = maxJumps;
             }
             else if (wallSide == 1) // Wall on right
             {
                 animator.SetBool("Left_Active", false);
                 animator.SetBool("Right_Active", true);
+                jumpsLeft = maxJumps;
             }
         }
         else
