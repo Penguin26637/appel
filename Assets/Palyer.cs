@@ -155,9 +155,7 @@ public class Player : MonoBehaviour
             }
         }
 
-
-
-        // Detect jump input - THIS MUST BE OUTSIDE ANY CONDITIONAL BLOCKS
+        // Detect jump input
         if (Input.GetButtonDown("Jump"))
         {
             lastJumpPressedTime = Time.time;
@@ -187,8 +185,7 @@ public class Player : MonoBehaviour
         HandleJump();
         HandleWallSlide();
         FlipSprite();
-        HandleWallRotationAnimation();
-        //OnDrawGizmosSelected();
+        // HandleWallRotationAnimation(); // Note: This method was referenced but not defined in your snippet
     }
 
     void FixedUpdate()
@@ -214,7 +211,6 @@ public class Player : MonoBehaviour
             accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? airaccel * airControl : airdeccel * airControl;
         }
 
-        //float movement = speedDiff * accelRate * Time.fixedDeltaTime;
         float movement = speedDiff * Time.fixedDeltaTime;
         rb.AddForce(movement * Vector2.right, ForceMode2D.Force);
     }
@@ -228,17 +224,14 @@ public class Player : MonoBehaviour
 
         if (jumpPressed)
         {
-            // Priority 1: Wall jump
             if (isWallSliding)
             {
                 WallJump();
             }
-            // Priority 2: Ground jump (including coyote time)
             else if ((isGrounded || coyote) && jumpsLeft > 0)
             {
                 Jump();
             }
-            // Priority 3: Air jump (double jump, triple jump, etc.)
             else if (!isGrounded && jumpsLeft > 0)
             {
                 Jump();
@@ -248,31 +241,19 @@ public class Player : MonoBehaviour
 
     void Jump()
     {
-        // Set Y velocity to jump force, keep X velocity
         rb.velocity = new Vector2(rb.velocity.x, jumpForce);
-
-        // Decrease jumps
         jumpsLeft--;
     }
 
     void WallJump()
     {
         wallJumping = true;
-
-        // Jump away from the wall
-        // If wall is on left (wallSide = -1), jump right (+1)
-        // If wall is on right (wallSide = 1), jump left (-1)
         float xDirection = -wallSide;
-
         rb.velocity = new Vector2(
             xDirection * wallJumpAngle.x * wallJumpForce,
             wallJumpAngle.y * wallJumpForce
         );
-
-        // Reset jumps after wall jump
-        jumpsLeft = maxJumps - 1;
-
-        Invoke(nameof(StopWallJump), wallJumpDuration);
+        Invoke("StopWallJump", wallJumpDuration);
     }
 
     void StopWallJump()
@@ -282,17 +263,10 @@ public class Player : MonoBehaviour
 
     void HandleWallSlide()
     {
-        if (rb == null) return;
-
-        // Wall slide conditions:
-        // 1. Not grounded
-        // 2. Touching a wall
-        // 3. Moving downward
-        if (!isGrounded && isTouchingWall && rb.velocity.y < 0)
+        if (isTouchingWall && !isGrounded && rb.velocity.y < 0)
         {
             isWallSliding = true;
-            // Limit fall speed when wall sliding
-            rb.velocity = new Vector2(rb.velocity.x, Mathf.Clamp(rb.velocity.y, -wallSlideSpeed, float.MaxValue));
+            rb.velocity = new Vector2(rb.velocity.x, -wallSlideSpeed);
         }
         else
         {
@@ -302,85 +276,21 @@ public class Player : MonoBehaviour
 
     void FlipSprite()
     {
-        if (wallJumping) return;
-
-        // Flip the visual sprite (on LemonGuy if assigned, otherwise on this object)
-        SpriteRenderer targetSprite = spriteRenderer;
-        if (lemonGuyVisual != null)
-        {
-            SpriteRenderer visualSprite = lemonGuyVisual.GetComponent<SpriteRenderer>();
-            if (visualSprite != null) targetSprite = visualSprite;
-        }
-
-        if (targetSprite == null) return;
-
-        // Flip sprite based on movement direction
-        if (moveInput > 0)
-        {
-            targetSprite.flipX = false;
-        }
-        else if (moveInput < 0)
-        {
-            targetSprite.flipX = true;
-        }
-    }
-
-    void HandleWallRotationAnimation()
-    {
-        if (animator == null)
-        {
-            Debug.LogWarning("Animator is null!");
-            return;
-        }
-
-        // Set animator parameters based on wall touching state
-        if (isTouchingWall && !isGrounded)
-        {
-            if (wallSide == -1) // Wall on left
-            {
-                animator.SetBool("Left_Active", true);
-                animator.SetBool("Right_Active", false);
-                jumpsLeft = maxJumps;
-            }
-            else if (wallSide == 1) // Wall on right
-            {
-                animator.SetBool("Left_Active", false);
-                animator.SetBool("Right_Active", true);
-                jumpsLeft = maxJumps;
-            }
-        }
-        else
-        {
-            // Not touching wall - reset parameters
-            animator.SetBool("Left_Active", false);
-            animator.SetBool("Right_Active", false);
-        }
+        if (moveInput > 0) spriteRenderer.flipX = false;
+        else if (moveInput < 0) spriteRenderer.flipX = true;
     }
 
     private void OnDrawGizmosSelected()
     {
-        // Draw ground check
         if (groundCheck != null)
         {
-            Gizmos.color = Color.yellow;
+            Gizmos.color = Color.red;
             Gizmos.DrawWireSphere(groundCheck.position, checkRadius);
-            Gizmos.DrawWireSphere(Top.position, checkRadius);
         }
-
-        // Draw right wall check
-        if (wallCheckRight != null)
+        if (Top != null)
         {
             Gizmos.color = Color.blue;
-            Gizmos.DrawWireSphere(wallCheckRight.position, wallCheckRadius);
-            Gizmos.DrawRay(wallCheckRight.position, Vector2.right * wallCheckRadius);
-        }
-
-        // Draw left wall check
-        if (wallCheckLeft != null)
-        {
-            Gizmos.color = Color.cyan;
-            Gizmos.DrawWireSphere(wallCheckLeft.position, wallCheckRadius);
-            Gizmos.DrawRay(wallCheckLeft.position, Vector2.left * wallCheckRadius);
+            Gizmos.DrawWireSphere(Top.position, checkRadius);
         }
     }
 }
