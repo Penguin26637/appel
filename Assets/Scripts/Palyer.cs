@@ -6,10 +6,10 @@ using UnityEngine;
 public class Player : MonoBehaviour
 {
     [Header("Movement")]
-    public float moveSpeed = 40f;
-    public float accel = 5f;
+    public float moveSpeed = 5f;
+    // public float accel = 5f;
     public float airaccel = 5f;
-    public float deccel = 15f;
+    // public float deccel = 15f;
     public float airdeccel = 15f;
     public float airControl = 0.5f;
 
@@ -145,7 +145,11 @@ public class Player : MonoBehaviour
         wallLeft = Physics2D.OverlapBox(wallLeftCenter, wallBoxSize, 0f, groundLayer) != null && !isGrounded;
 
         isTouchingWall = wallRight || wallLeft;
+        // print("left" + wallRight);
+        // print("right" + wallLeft);
+        // print("ground" + isGrounded);
 
+        // print("jumpsLeft: " + jumpsLeft);
         // Determine which side of wall we're on
         if (wallRight) wallSide = 1; // Wall is on right side
         else if (wallLeft) wallSide = -1; // Wall is on left side
@@ -189,7 +193,7 @@ public class Player : MonoBehaviour
             rb.gravityScale = 1;
         }
 
-        print(wallLeft && wallRight);
+        // print(wallLeft || wallRight);
 
         HandleWallSlide();
         HandleJump();
@@ -205,23 +209,24 @@ public class Player : MonoBehaviour
     void HandleMovement()
     {
         if (wallJumping || rb == null) return;
+        rb.velocity = new Vector2(moveInput * moveSpeed, rb.velocity.y);
 
-        float targetSpeed = moveInput * moveSpeed;
-        float speedDiff = targetSpeed - rb.velocity.x;
-        float accelRate;
+        // float targetSpeed = moveInput * moveSpeed;
+        // float speedDiff = targetSpeed - rb.velocity.x;
+        // float accelRate;
 
         // Use different acceleration rates for ground vs air
-        if (isGrounded)
-        {
-            accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? accel : deccel;
-        }
-        else
-        {
-            accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? airaccel * airControl : airdeccel * airControl;
-        }
+        // if (isGrounded)
+        // {
+        //     accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? accel : deccel;
+        // }
+        // else
+        // {
+        //     accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? airaccel * airControl : airdeccel * airControl;
+        // }
 
-        float movement = speedDiff * Time.fixedDeltaTime;
-        rb.AddForce(movement * Vector2.right, ForceMode2D.Force);
+        // float movement = speedDiff * Time.fixedDeltaTime;
+        // rb.AddForce(movement * Vector2.right, ForceMode2D.Force);
     }
 
     void HandleJump()
