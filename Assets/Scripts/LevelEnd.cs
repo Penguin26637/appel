@@ -15,6 +15,8 @@ public class LevelEnd : MonoBehaviour
         
         // Default checkpoint is where the player starts the level
         lastCheckpointPos = transform.position;
+        //print("start" + lastCheckpointPos);
+        print(gameObject.name);
     }
 
     void OnTriggerEnter2D(Collider2D other)
@@ -38,7 +40,8 @@ public class LevelEnd : MonoBehaviour
             Vector3 worldPos = other.gameObject.transform.position;
             
             // Force Z to 0 and save it
-            lastCheckpointPos = new Vector2(worldPos.x, worldPos.y);
+            lastCheckpointPos = new Vector3(worldPos.x, worldPos.y, 0);
+            print("LastCheckPos" + lastCheckpointPos);
 
             Debug.Log("New Checkpoint Saved at: " + lastCheckpointPos);
         }
@@ -49,11 +52,11 @@ public class LevelEnd : MonoBehaviour
     {
         // Move the player to the saved position
         transform.position = lastCheckpointPos;
+        print("Reset Pos" + transform.position);
 
         // Reset physics so the player doesn't keep falling/moving
         if (rb != null)
         {
-            // Use .velocity instead of .linearVelocity for Unity 2022 and older
             rb.velocity = Vector2.zero; 
             rb.angularVelocity = 0f;
         }
