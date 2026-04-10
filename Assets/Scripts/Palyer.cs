@@ -48,13 +48,10 @@ public class Player : MonoBehaviour
     private float lastJumpPressedTime;
     private bool isGrounded;
     private bool isTop;
-    private bool isTouchingWall;
     private bool isWallSliding;
     private bool wallJumping;
     private float moveInput;
     private int wallSide;
-    private bool wallRight;
-    private bool wallLeft;
     private bool movingup = false;
 
     void Start()
@@ -108,10 +105,7 @@ public class Player : MonoBehaviour
             Debug.LogError("Rigidbody2D not found on " + gameObject.name);
         if (groundCheck == null)
             Debug.LogError("Ground check not assigned! Assign Ground child from LemonGuy");
-        if (wallCheckRight == null)
-            Debug.LogError("Right wall check not assigned!");
-        if (wallCheckLeft == null)
-            Debug.LogError("Left wall check not assigned!");
+
         if (Top == null)
             Debug.LogError("Top Wall Check not assigned!");
 
@@ -137,23 +131,6 @@ public class Player : MonoBehaviour
         Vector2 topBoxSize = new Vector2(topCheckWidth, checkRadius);
         isTop = Physics2D.OverlapBox(Top.position, topBoxSize, 0f, groundLayer);
 
-        // Wall Checks - RECTANGLES
-        Vector2 wallBoxSize = new Vector2(wallCheckRadius * 2f, wallCheckHeight);
-        Vector2 wallRightCenter = (Vector2)wallCheckRight.position + Vector2.right * wallCheckRadius;
-        Vector2 wallLeftCenter = (Vector2)wallCheckLeft.position + Vector2.left * wallCheckRadius;
-        wallRight = Physics2D.OverlapBox(wallRightCenter, wallBoxSize, 0f, groundLayer) != null && !isGrounded;
-        wallLeft = Physics2D.OverlapBox(wallLeftCenter, wallBoxSize, 0f, groundLayer) != null && !isGrounded;
-
-        isTouchingWall = wallRight || wallLeft;
-        // print("left" + wallRight);
-        // print("right" + wallLeft);
-        // print("ground" + isGrounded);
-
-        // print("jumpsLeft: " + jumpsLeft);
-        // Determine which side of wall we're on
-        if (wallRight) wallSide = 1; // Wall is on right side
-        else if (wallLeft) wallSide = -1; // Wall is on left side
-        else wallSide = 0;
 
         // Reset jumps when grounded
         if (isGrounded)
@@ -195,7 +172,6 @@ public class Player : MonoBehaviour
 
         // print(wallLeft || wallRight);
 
-        HandleWallSlide();
         HandleJump();
         FlipSprite();
         // HandleWallRotationAnimation(); // Note: This method was referenced but not defined in your snippet
@@ -223,7 +199,7 @@ public class Player : MonoBehaviour
         // else
         // {
         //     accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? airaccel * airControl : airdeccel * airControl;
-        // }
+        // 
 
         // float movement = speedDiff * Time.fixedDeltaTime;
         // rb.AddForce(movement * Vector2.right, ForceMode2D.Force);
@@ -275,37 +251,7 @@ public class Player : MonoBehaviour
         wallJumping = false;
     }
 
-    void HandleWallSlide()
-    {
-        if (isTouchingWall && !isGrounded && rb.velocity.y < 0)
-        {
-            isWallSliding = true;
-            rb.velocity = new Vector2(rb.velocity.x, -wallSlideSpeed);
-        }
-        else
-        {
-            isWallSliding = false;
-        }
-
-        if (wallSide == -1) // Wall on left
-        {
-            animator.SetBool("Left_Active", true);
-            animator.SetBool("Right_Active", false);
-            jumpsLeft = maxJumps;
-        }
-        else if (wallSide == 1) // Wall on right
-        {
-            animator.SetBool("Left_Active", false);
-            animator.SetBool("Right_Active", true);
-            jumpsLeft = maxJumps;
-        }
-        else
-        {
-            // Not touching wall - reset parameters
-            animator.SetBool("Left_Active", false);
-            animator.SetBool("Right_Active", false);
-        }
-    }
+    
     
     void FlipSprite()
     {
