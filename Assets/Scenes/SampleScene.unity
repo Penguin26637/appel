@@ -179,7 +179,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0.002, y: -0.322, z: -0.085418224}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.6128125, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1172209103}
@@ -640,7 +640,7 @@ BoxCollider2D:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 580365910}
-  m_Enabled: 1
+  m_Enabled: 0
   m_Density: 1
   m_Material: {fileID: 0}
   m_IncludeLayers:
@@ -1337,8 +1337,9 @@ MonoBehaviour:
   wallCheckRight: {fileID: 772903640}
   wallCheckLeft: {fileID: 2042199278}
   Top: {fileID: 1019987045}
+  PlayerSprite: {fileID: 580365912}
   checkRadius: 0.05
-  groundCheckWidth: 0.5
+  groundCheckWidth: 0.45
   topCheckWidth: 0.5
   wallCheckRadius: 0.02
   wallCheckHeight: 0.5
